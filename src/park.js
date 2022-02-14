@@ -17,6 +17,10 @@ const last_names = require("../lib/last-names.json");
  * 'peer_map' is the map used by Passerby's local transport
  */ 
 
+const LAT_MINUTES_MILES = 1.15;
+const LON_MINUTES_MILES = 0.91;
+const MINUTES_PER_DEGREE = 60;
+
 const world = new Map();
 const peer_map = new Map();
 const port = 31337;
@@ -58,8 +62,8 @@ async function generate_peers(n_peers) {
     const last = last_names.splice(Math.floor(Math.random() * last_names.length), 1)[0];
     const lat_offset_miles = Math.random() * cfg.map_size - (cfg.map_size / 2);
     const lon_offset_miles = Math.random() * cfg.map_size - (cfg.map_size / 2);
-    const lat_offset = lat_offset_miles / 1.15 / 60;
-    const lon_offset = lon_offset_miles / 0.91 / 60;
+    const lat_offset = lat_offset_miles / LAT_MINUTES_MILES / MINUTES_PER_DEGREE;
+    const lon_offset = lon_offset_miles / LON_MINUTES_MILES / MINUTES_PER_DEGREE;
     await add_peer(`${first} ${last}`, cfg.map_center.lat + lat_offset, cfg.map_center.lon + lon_offset);
   }
 }
