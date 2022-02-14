@@ -1,7 +1,10 @@
 "use strict";
 
+const http = require("http");
+const url = require("url");
 const cfg = require("../park.json");
 const p = cfg.passerby_path;
+const { service } = require("./service.js");
 const { Passerby } = require(`${p}src/protocol/protocol.js`);
 const { Local } = require(`${p}src/transport/local/local.js`);
 const { Identity } = require(`${p}src/protocol/identity.js`);
@@ -17,6 +20,9 @@ const last_names = require("../lib/last-names.json");
  * 'peer_map' is the map used by Passerby's local transport
  */ 
 
+const HTTP_HOST = "localhost";
+const HTTP_PORT = 9000;
+
 const LAT_MINUTES_MILES = 1.15;
 const LON_MINUTES_MILES = 0.91;
 const MINUTES_PER_DEGREE = 60;
@@ -27,10 +33,11 @@ const port = 31337;
 let bootstrap_node = null;
 
 class Peer_state {
-  constructor(name, api, location) {
+  constructor(name, api, location, pubstring) {
     this.name = name;
     this.api = api;
     this.location = location;
+    this.pubstring = pubstring;
   }
 }
 
@@ -48,11 +55,11 @@ async function add_peer(name, lat, lon) {
     boot_public_key: bootstrap_node.public_key
   });
 
-  await peer.assert(lat, lon, pubstring);
+  await peer.assert(lat, lon, pubstring, pubstring);
 
   world.set(
     pubstring, 
-    new Peer_state(name, peer, new Coord({lat: lat, lon: lon}))
+    new Peer_state(name, peer, new Coord({lat: lat, lon: lon}), pubstring)
   );
 }
 
@@ -68,6 +75,9 @@ async function generate_peers(n_peers) {
   }
 }
 
+/**
+ * STARTUP
+ */ 
 (async () => {
   await Crypto.Sodium.ready;
   bootstrap_node = new Identity();
@@ -92,11 +102,36 @@ async function generate_peers(n_peers) {
   await bootstrap.assert(
     cfg.map_center.lat, 
     cfg.map_center.lon, 
+    bootstrap_node.public_key.pubstring(),
     bootstrap_node.public_key.pubstring()
   );
 
   world.set(
     bootstrap_node.public_key.pubstring(), 
-    new Peer_state("BOOTSTRAP NODE", bootstrap, new Coord(cfg.map_center))
+    new Peer_state(
+      "BOOTSTRAP NODE", 
+      bootstrap, 
+      new Coord(cfg.map_center), 
+      bootstrap_node.public_key.pubstring()
+    )
   );
+
+  await generate_peers(cfg.auto_populate);
+
+  const request_listener = async (req, res) => {
+    const parsed = url.parse(req.url, true);
+    await service(parsed, res, world);
+  };
+
+  const server = http.createServer(request_listener);
+  const s = new Array(68 - 15 - HTTP_HOST.length - HTTP_PORT.toString().length).fill(" ").join("");
+
+  await server.listen(HTTP_PORT, HTTP_HOST, () => {
+    console.log("+--------------------------------------------------------------------+");
+    console.log("|                                                                    |")
+    console.log("| passerby park server                                               |");
+    console.log(`| listening on ${HTTP_HOST}:${HTTP_PORT}${s}|`);
+    console.log("|                                                                    |")
+    console.log("+--------------------------------------------------------------------+");
+  });
 })();

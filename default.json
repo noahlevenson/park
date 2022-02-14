@@ -4,5 +4,6 @@
     "lat": 40.6761046, 
     "lon": -73.9735496
   },
-  "map_size": 20
+  "map_size": 20,
+  "auto_populate": 0
 }
