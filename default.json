@@ -1,0 +1,8 @@
+{
+  "passerby_path": "/your/path/here/",
+  "map_center": {
+    "lat": 40.6761046, 
+    "lon": -73.9735496
+  },
+  "map_size": 20
+}
