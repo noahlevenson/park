@@ -1,5 +1,6 @@
 "use strict";
 
+const MSG_ANIM = 5;
 let last_state = null;
 
 async function tick(game) {
@@ -55,8 +56,18 @@ async function tick(game) {
     const msg_sprite = game.add.sprite(start.x, start.y, msg_gfx.generateTexture());
     msg_sprite.anchor.setTo(0.5, 0.5);
 
-    const msg_tween = game.add.tween(msg_sprite.position).
-      to({x: end.x, y: end.y}, MSG_ANIMATION_DURATION, Phaser.Easing.Linear.None, true, 0, 0, false);
+    const dist = game.math.max(game.math.distance(start.x, start.y, end.x, end.y), 100);
+    const duration = dist * MSG_ANIM;
+    let msg_tween;
+
+    // It's a loopback message, so we do a special yoyo animation
+    if (start.x === end.x && start.y === end.y) {
+      msg_tween = game.add.tween(msg_sprite.position).
+        to({x: start.x, y: end.y - dist}, duration, Phaser.Easing.Linear.None, true, 0, 0, true);
+    } else {
+      msg_tween = game.add.tween(msg_sprite.position).
+        to({x: end.x, y: end.y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
+    }
 
     msg_tween.onComplete.addOnce(() => {
       msg_sprite.destroy();
