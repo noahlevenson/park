@@ -4,8 +4,8 @@ const EventEmitter = require("events");
 const http = require("http");
 const url = require("url");
 const { Server } = require("socket.io");
-const cfg = require("../park.json");
-const p = cfg.passerby_path;
+const CFG = require("../park.json");
+const p = CFG.passerby_path;
 const { service } = require("./service.js");
 const { Passerby } = require(`${p}src/protocol/protocol.js`);
 const { Local } = require(`${p}src/transport/local/local.js`);
@@ -74,11 +74,11 @@ async function generate_peers(n_peers) {
   for (let i = 0; i < n_peers; i += 1) {
     const first = first_names.splice(Math.floor(Math.random() * first_names.length), 1)[0];
     const last = last_names.splice(Math.floor(Math.random() * last_names.length), 1)[0];
-    const lat_offset_miles = Math.random() * cfg.map_size - (cfg.map_size / 2);
-    const lon_offset_miles = Math.random() * cfg.map_size - (cfg.map_size / 2);
+    const lat_offset_miles = Math.random() * CFG.map_size - (CFG.map_size / 2);
+    const lon_offset_miles = Math.random() * CFG.map_size - (CFG.map_size / 2);
     const lat_offset = lat_offset_miles / LAT_MINUTES_MILES / MINUTES_PER_DEGREE;
     const lon_offset = lon_offset_miles / LON_MINUTES_MILES / MINUTES_PER_DEGREE;
-    await add_peer(`${first} ${last}`, cfg.map_center.lat + lat_offset, cfg.map_center.lon + lon_offset);
+    await add_peer(`${first} ${last}`, CFG.map_center.lat + lat_offset, CFG.map_center.lon + lon_offset);
   }
 }
 
@@ -108,8 +108,8 @@ async function generate_peers(n_peers) {
   });
 
   await bootstrap.assert(
-    cfg.map_center.lat, 
-    cfg.map_center.lon, 
+    CFG.map_center.lat, 
+    CFG.map_center.lon, 
     bootstrap_node.public_key.pubstring(),
     bootstrap_node.public_key.pubstring()
   );
@@ -119,13 +119,12 @@ async function generate_peers(n_peers) {
     new Peer_state(
       "BOOTSTRAP NODE", 
       bootstrap, 
-      new Coord(cfg.map_center), 
+      new Coord(CFG.map_center), 
       bootstrap_node.public_key.pubstring()
     )
   );
 
-  await generate_peers(0
-    );
+  await generate_peers(CFG.auto_populate);
 
   const request_listener = async (req, res) => {
     const parsed = url.parse(req.url, true);

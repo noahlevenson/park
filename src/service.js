@@ -27,7 +27,7 @@ async function service(parsed, res, world) {
         return {
           name: peer_state.name,
           last_asserted_lat: peer_state.location.lat,
-          last_asserted_long: peer_state.location.lon
+          last_asserted_lon: peer_state.location.lon
         };
       });
 
