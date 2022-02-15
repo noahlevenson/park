@@ -22,14 +22,14 @@ async function service(parsed, res, world) {
       res.setHeader("Content-Type", "application/json");
       res.writeHead(200);
 
-      // Transform the world Map into some interesting JSON
-      const json = Array.from(world.values()).map(peer_state => {
-        return {
-          name: peer_state.name,
-          last_asserted_lat: peer_state.location.lat,
+      // Transform the world Map into some interesting json
+      const json = Object.fromEntries(Array.from(world.values()).map(peer_state => {
+        return [peer_state.pubstring, {
+          name: peer_state.name, 
+          last_asserted_lat: peer_state.location.lat, 
           last_asserted_lon: peer_state.location.lon
-        };
-      });
+        }];
+      }));
 
       res.end(JSON.stringify(json));
       break;
