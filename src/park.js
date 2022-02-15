@@ -1,7 +1,9 @@
 "use strict";
 
+const EventEmitter = require("events");
 const http = require("http");
 const url = require("url");
+const { Server } = require("socket.io");
 const cfg = require("../park.json");
 const p = cfg.passerby_path;
 const { service } = require("./service.js");
@@ -20,16 +22,18 @@ const last_names = require("../lib/last-names.json");
  * 'peer_map' is the map used by Passerby's local transport
  */ 
 
-const HTTP_HOST = "localhost";
-const HTTP_PORT = 9000;
-
 const LAT_MINUTES_MILES = 1.15;
 const LON_MINUTES_MILES = 0.91;
 const MINUTES_PER_DEGREE = 60;
 
+const HTTP_HOST = "localhost";
+const HTTP_PORT = 9000;
+
+const announcer = new EventEmitter();
 const world = new Map();
 const peer_map = new Map();
 const port = 31337;
+
 let bootstrap_node = null;
 
 class Peer_state {
@@ -44,7 +48,10 @@ class Peer_state {
 async function add_peer(name, lat, lon) {
   const peer_id = new Identity();
   const pubstring = peer_id.public_key.pubstring();
-  const peer = new Passerby({transport: new Local({my_addr: pubstring, peer_map: peer_map})})
+ 
+  const peer = new Passerby({
+    transport: new Local({my_addr: pubstring, peer_map: peer_map, announcer: announcer})
+  })
 
   await peer.start({
     my_addr: pubstring,
@@ -85,7 +92,8 @@ async function generate_peers(n_peers) {
   const local = new Local({
     my_addr: bootstrap_node.public_key.pubstring(), 
     my_port: port, 
-    peer_map: peer_map
+    peer_map: peer_map,
+    announcer: announcer
   });
  
   const bootstrap = new Passerby({transport: local});
@@ -116,7 +124,8 @@ async function generate_peers(n_peers) {
     )
   );
 
-  await generate_peers(cfg.auto_populate);
+  await generate_peers(0
+    );
 
   const request_listener = async (req, res) => {
     const parsed = url.parse(req.url, true);
@@ -124,6 +133,24 @@ async function generate_peers(n_peers) {
   };
 
   const server = http.createServer(request_listener);
+  const io = new Server(server);
+
+  announcer.on("message", (from, to, msg) => {
+    io.emit("traffic", from, to);
+  });
+
+  let clients = 0;
+
+  io.on("connection", (socket) => {
+    clients += 1;
+    console.log(`A client connected... total clients: ${clients}`);
+
+    socket.on("disconnect", () => {
+      clients -= 1;
+      console.log(`Client disconnected... total clients: ${clients}`);
+    });
+  });
+
   const s = new Array(68 - 15 - HTTP_HOST.length - HTTP_PORT.toString().length).fill(" ").join("");
 
   await server.listen(HTTP_PORT, HTTP_HOST, () => {

@@ -2,15 +2,17 @@
 
 const fs = require("fs");
 
+const CLIENT_PATH = "./client";
+
 async function service(parsed, res, world) {
   switch (parsed.pathname) {
     case "/":
-      fs.readFile("./public/index.html", (err, contents) => {
+      fs.readFile(`${CLIENT_PATH}/index.html`, (err, contents) => {
         if (err) {
           throw new Error(err);
         }
         
-        res.setHeader("Contet-Type", "text/html");
+        res.setHeader("Content-Type", "text/html");
         res.writeHead(200);
         res.end(contents);
       });
@@ -94,6 +96,17 @@ async function service(parsed, res, world) {
       }
 
       break;
+    default:
+      fs.readFile(`${CLIENT_PATH}${parsed.pathname}`, (err, contents) => {
+        if (err) {
+          res.writeHead(404);
+          res.end("Bad request");
+        }
+        
+        // TODO: Set content type?
+        res.writeHead(200);
+        res.end(contents);
+      });
   }
 }
 

@@ -1,0 +1,25 @@
+{
+  "name": "park",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/park.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noahlevenson/park.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/noahlevenson/park/issues"
+  },
+  "homepage": "https://github.com/noahlevenson/park#readme",
+  "dependencies": {
+    "socket.io": "^4.4.1"
+  }
+}
