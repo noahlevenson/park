@@ -2,7 +2,7 @@
   "name": "park",
   "version": "1.0.0",
   "description": "",
-  "main": "src/park.js",
+  "main": "src/server/park.js",
   "directories": {
     "lib": "lib"
   },

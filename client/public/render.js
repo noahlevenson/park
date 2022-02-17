@@ -1,6 +1,7 @@
 "use strict"
 
 // TODO: map size, map center, and geo constants should be kept in a common config
+const MSG_ANIMATION_BASE_DURATION = 5;
 const SCREENSPACE_SIZE = 1000;
 const SCREENSPACE_CENTER = SCREENSPACE_SIZE / 2;
 const MAP_SIZE = 20;
@@ -33,6 +34,8 @@ function draw_peer(game, name, lat, lon) {
   peer.drawCircle(x, y, 10);
   peer.endFill();
 
-  const nametag = game.add.text(x, y + 24, name, {fontSize: "16px", fill: "#FFFFFF"});
+  const nametag = game.add.text(x, y + 20, `${name}`, {fontSize: "12px", fill: "#FFFFFF"});
   nametag.anchor.setTo(0.5, 0.5);
+  const loc = game.add.text(x, y + 40, `${lat}, ${lon}`, {fontSize: "12px", fill: "#FFFFFF"});
+  loc.anchor.setTo(0.5, 0.5);
 }
