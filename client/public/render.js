@@ -1,6 +1,6 @@
 "use strict"
 
-// TODO: map size, map center, and geo constants should be kept in a common config
+// TODO: map size, map center, and geo constants should be kept in a shared config with the server
 const MSG_ANIMATION_BASE_DURATION = 5;
 const SCREENSPACE_SIZE = 1000;
 const SCREENSPACE_CENTER = SCREENSPACE_SIZE / 2;
@@ -24,18 +24,26 @@ function geo_to_screenspace(lat, lon) {
   return {x: SCREENSPACE_CENTER + lat_px_offset, y: SCREENSPACE_CENTER + lon_px_offset};
 }
 
-function draw_peer(game, name, lat, lon) {
+function add_peer(game, name, lat, lon) {
   const lat_px_offset = (MAP_CENTER_LAT - lat) * LAT_S;
   const lon_px_offset = (MAP_CENTER_LON - lon) * LON_S;
   const {x, y} = geo_to_screenspace(lat, lon);
 
+  const peer_group = game.add.group();
+  peer_group.position = {x, y};
+
   const peer = game.add.graphics(0, 0);
   peer.beginFill(0xFFFFFF);
-  peer.drawCircle(x, y, 10);
+  peer.drawCircle(0, 0, 10);
   peer.endFill();
 
-  const nametag = game.add.text(x, y + 20, `${name}`, {fontSize: "12px", fill: "#FFFFFF"});
+  const nametag = game.add.text(0, 0 + 20, `${name}`, {fontSize: "12px", fill: "#FFFFFF"});
   nametag.anchor.setTo(0.5, 0.5);
-  const loc = game.add.text(x, y + 40, `${lat}, ${lon}`, {fontSize: "12px", fill: "#FFFFFF"});
-  loc.anchor.setTo(0.5, 0.5);
+  const location = game.add.text(0, 0 + 40, `${lat}, ${lon}`, {fontSize: "12px", fill: "#FFFFFF"});
+  location.anchor.setTo(0.5, 0.5);
+
+  peer_group.add(peer);
+  peer_group.add(nametag);
+  peer_group.add(location);
+  return peer_group;
 }

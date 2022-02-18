@@ -1,7 +1,12 @@
 "use strict";
 
+const socket = io();
 let last_state = null;
+let peers = new Map();
 
+/**
+ * API request wrappers
+ */ 
 function req_state() {
   socket.emit("state");
 }
@@ -28,31 +33,40 @@ const play = {
     msg_gfx.endFill();
 
     /**
-     * Inbound state from the server
+     * Handle messages from the server
      */ 
     socket.on("state", (state) => {
       for (const [pubstring, peer] of Object.entries(state)) {
-        draw_peer(game, peer.name, peer.last_asserted_lat, peer.last_asserted_lon);
+        /**
+         * If we've already created a peer object for this peer, lerp it to their new location -- and
+         * if we haven't, then create a new peer object for this peer
+         */ 
+        if (peers[pubstring]) {
+          const old_loc = geo_to_screenspace(
+            last_state[pubstring].last_asserted_lat, 
+            last_state[pubstring].last_asserted_lon
+          );
+
+          const new_loc = geo_to_screenspace(peer.last_asserted_lat, peer.last_asserted_lon);
+          const dist = game.math.max(game.math.distance(old_loc.x, old_loc.y, new_loc.x, new_loc.y), 100);
+          const duration = dist * MSG_ANIMATION_BASE_DURATION;
+          
+          const move_tween = game.add.tween(peers[pubstring].position).
+            to({x: new_loc.x, y: new_loc.y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
+        } else {
+          peers[pubstring] = add_peer(game, peer.name, peer.last_asserted_lat, peer.last_asserted_lon);
+        }
       }
 
       last_state = state;
     });
+
+
 
     socket.on("search", (search) => {
       console.log(search);
     })
 
-    socket.on("move", (state) => {
-      for (const [pubstring, peer] of Object.entries(state)) {
-        draw_peer(game, peer.name, peer.last_asserted_lat, peer.last_asserted_lon);
-      }
-
-      last_state = state;
-    });
-
-    /**
-     * Inbound live traffic from the server
-     */ 
     socket.on("traffic", (from, to) => {
       // TODO: If we make our boot process cleaner, we won't need these
       if (last_state === null || !last_state[from] || !last_state[to]) {
@@ -93,7 +107,7 @@ const play = {
 }
 
 /**
- * Construct the game
+ * Construct the game and start!
  */ 
 const cfg = {
   width: SCREENSPACE_SIZE,
