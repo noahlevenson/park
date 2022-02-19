@@ -61,8 +61,6 @@ const play = {
       last_state = state;
     });
 
-
-
     socket.on("search", (search) => {
       console.log(search);
     })
