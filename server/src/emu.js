@@ -21,7 +21,6 @@ class Emu {
     this.peer_table = new Map();
     this.server = server;
     this.bootstrap_id = null;
-    this.bootstrap_node = null;
   }
 
   async init() {
@@ -84,7 +83,6 @@ class Emu {
 
     this.world[bootstrap_pubstring] = new Peer_state(
       "BOOTSTRAP NODE", 
-      null, 
       new Coord(cfg.map_center), 
       bootstrap_pubstring
     );
@@ -206,8 +204,7 @@ class Emu {
     });
 
     this.world[pubstring] = new Peer_state(
-      name, 
-      null, 
+      name,
       new Coord({lat: lat, lon: lon}), 
       pubstring
     );
@@ -257,9 +254,8 @@ class Emu {
 }
 
 class Peer_state {
-  constructor(name, api, location, pubstring) {
+  constructor(name, location, pubstring) {
     this.name = name;
-    this.api = api;
     this.location = location;
     this.pubstring = pubstring;
   }
