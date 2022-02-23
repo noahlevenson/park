@@ -50,7 +50,7 @@ const play = {
           const new_loc = geo_to_screenspace(peer.last_asserted_lat, peer.last_asserted_lon);
           const dist = game.math.max(game.math.distance(old_loc.x, old_loc.y, new_loc.x, new_loc.y), 100);
           const duration = dist * MSG_ANIMATION_BASE_DURATION;
-          
+
           const move_tween = game.add.tween(peers[pubstring].position).
             to({x: new_loc.x, y: new_loc.y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
         } else {

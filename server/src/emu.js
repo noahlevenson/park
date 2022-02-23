@@ -1,12 +1,14 @@
 "use strict";
 
+const EventEmitter = require("events");
+const { Worker, MessageChannel } = require("worker_threads");
 const cfg = require("../park.json");
 const p = cfg.passerby_path;
 const { Passerby } = require(`${p}src/protocol/protocol.js`);
 const { Local } = require(`${p}src/transport/local/local.js`);
 const { Identity } = require(`${p}src/protocol/identity.js`);
 const { Coord } = require(`${p}src/core/geo.js`);
-const { Worker, MessageChannel } = require("worker_threads");
+const { Control_msg } = require("./control.js"); 
 const first_names = require("../lib/first-names.json");
 const last_names = require("../lib/last-names.json");
 
@@ -21,6 +23,8 @@ class Emu {
     this.peer_table = new Map();
     this.server = server;
     this.bootstrap_id = null;
+    this.control = new EventEmitter();
+    this._generation = 0;
   }
 
   async init() {
@@ -46,39 +50,37 @@ class Emu {
       msg_port: msg_port2
     };
 
-    const peer_worker = new Worker("./peer.js", {workerData: workerData, transferList: [control_port2, msg_port2]});
+    const peer_worker = new Worker("./peer.js", {
+      workerData: workerData, 
+      transferList: [control_port2, msg_port2]
+    });
+    
     this.peer_table.set(workerData.pubstring, {control: control_port1, msg: msg_port1});
+
+    /**
+     * When the bootstrap receives a control message from the emulator, announce it for all subscribers
+     */ 
+    control_port1.on("message", (msg) => {
+      this.control.emit(msg.id, control_port1, msg);
+    });
 
     /**
      * Send the start command; when we get the result back, assert our location
      */ 
-    control_port1.postMessage({command: "start", args: [{
+    this.send_control(control_port1, new Control_msg(this.gen(), "start", [{
       my_addr: bootstrap_pubstring, 
       my_port: Emu.DEFAULT_PORT, 
       my_public_key: this.bootstrap_id.public_key, 
       boot_addr: bootstrap_pubstring,
       boot_port: Emu.DEFAULT_PORT,
       boot_public_key: this.bootstrap_id.public_key
-    }]});
-
-    control_port1.on("message", (msg) => {
-      switch (msg.command) {
-        case "start": (() => {
-          control_port1.postMessage({command: "assert", args: [
-            cfg.map_center.lat, 
-            cfg.map_center.lon, 
-            bootstrap_pubstring, 
-            bootstrap_pubstring
-          ]});
-        })();
-
-          break;
-        case "geosearch": (() => {
-          this.server.send({type: "search", search: msg.result});
-        })();
-
-          break;
-      }
+    }]), (port, msg) => {
+      this.send_control(control_port1, new Control_msg(this.gen(), "assert", [
+        cfg.map_center.lat, 
+        cfg.map_center.lon, 
+        bootstrap_pubstring, 
+        bootstrap_pubstring
+      ]));
     });
 
     this.world[bootstrap_pubstring] = new Peer_state(
@@ -105,10 +107,13 @@ class Emu {
           }
 
           const control_port = this.peer_table.get(peer_state.pubstring).control;
-          
-          control_port.postMessage({
-            command: "geosearch", 
-            args: [peer_state.location.lat, peer_state.location.lon, msg.range]
+
+          this.send_control(control_port, new Control_msg(this.gen(), "geosearch", [
+            peer_state.location.lat, 
+            peer_state.location.lon, 
+            msg.range
+          ]), (port, control_msg) => {
+            this.server.send({type: "search", search: control_msg.payload});
           });
         })();
           
@@ -120,23 +125,25 @@ class Emu {
             throw new Error("There's no peer by that name");
           }
 
-          await peer_state.api.retract(
+          const control_port = this.peer_table.get(peer_state.pubstring).control;
+
+          this.send_control(control_port, new Control_msg(this.gen(), "retract", [
             peer_state.location.lat, 
             peer_state.location.lon, 
             peer_state.pubstring
-          );
-
-          await peer_state.api.assert(
-            msg.lat, 
-            msg.lon, 
-            peer_state.pubstring, 
-            peer_state.pubstring
-          );
-
-          peer_state.location.lat = msg.lat;
-          peer_state.location.lon = msg.lon;
-          this.world[peer_state.pubstring] = peer_state;
-          this.server.send({type: "state", state: this._serialize_world()});
+          ]), (port, control_msg) => {
+            this.send_control(control_port, new Control_msg(this.gen(), "assert", [
+              msg.lat,
+              msg.lon,
+              peer_state.pubstring,
+              peer_state.pubstring
+            ]), (port, control_msg) => {
+              peer_state.location.lat = msg.lat;
+              peer_state.location.lon = msg.lon;
+              this.world[peer_state.pubstring] = peer_state;
+              this.server.send({type: "state", state: this._serialize_world()});
+            });
+          });
         })();
 
           break;
@@ -168,41 +175,39 @@ class Emu {
       msg_port: msg_port2
     };
 
-    const peer_worker = new Worker("./peer.js", {workerData: workerData, transferList: [control_port2, msg_port2]});
+    const peer_worker = new Worker("./peer.js", {
+      workerData: workerData, 
+      transferList: [control_port2, msg_port2]
+    });
+    
     this.peer_table.set(workerData.pubstring, {control: control_port1, msg: msg_port1});
+
+    /**
+     * When the bootstrap receives a control message from the emulator, announce it for all subscribers
+     */ 
+    control_port1.on("message", (msg) => {
+      this.control.emit(msg.id, control_port1, msg);
+    });
 
     /**
      * Send the start command; when we get the result back, assert our location
      */ 
-    control_port1.postMessage({command: "start", args: [{
+    this.send_control(control_port1, new Control_msg(this.gen(), "start", [{
       my_addr: pubstring, 
       my_port: Emu.DEFAULT_PORT, 
       my_public_key: peer_id.public_key, 
       boot_addr: this.bootstrap_id.public_key.pubstring(),
       boot_port: Emu.DEFAULT_PORT,
       boot_public_key: this.bootstrap_id.public_key
-    }]});
-
-    control_port1.on("message", (msg) => {
-      switch (msg.command) {
-        case "start": (() => {
-          control_port1.postMessage({command: "assert", args: [
-            lat, 
-            lon, 
-            pubstring, 
-            pubstring
-          ]});
-        })();
-
-          break;
-        case "geosearch": (() => {
-          this.server.send({type: "search", search: msg.result});
-        })();
-
-          break;
-      }
+    }]), (port, msg) => {
+      this.send_control(control_port1, new Control_msg(this.gen(), "assert", [
+        lat, 
+        lon, 
+        pubstring, 
+       pubstring
+      ]));
     });
-
+    
     this.world[pubstring] = new Peer_state(
       name,
       new Coord({lat: lat, lon: lon}), 
@@ -225,6 +230,16 @@ class Emu {
         cfg.map_center.lon + lon_offset
       );
     }
+  }
+
+  gen() {
+    this._generation = this._generation < 0xFFFFFFFF ? this._generation + 1 : 0;
+    return this._generation;
+  }
+
+  send_control(port, msg, callback = () => {}) {
+    this.control.once(msg.id, callback);
+    port.postMessage(msg);
   }
 
   _serialize_world() {
