@@ -11,6 +11,10 @@ const { Control_msg } = require("./control.js");
 
 const DEFAULT_PORT = 31337;
 
+/**
+ * A single peer, to be instantiated by the emulator in its own thread
+ */ 
+
 (async () => {
   await Crypto.Sodium.ready;
   const {pubstring, bootstrap_pubstring, control_port, msg_port} = workerData;

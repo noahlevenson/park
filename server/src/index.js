@@ -7,7 +7,7 @@ const Crypto = require(`${p}src/core/crypto.js`);
 const { Emu } = require("./emu.js");
 
 /**
- * Our architecture decouples the emulation engine from the web server. Currently, the emulator is
+ * Our architecture decouples the emulation engine from the web server. Currently, index.js is
  * the main process and the web server is a child process; however, we may want to flip that: 
  * Imagine an architecture where multiple instances of the emulator run on different machines,
  * each one a child process of a master server. At the server, the world state of each emulator

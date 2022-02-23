@@ -12,6 +12,19 @@ const { Control_msg } = require("./control.js");
 const first_names = require("../lib/first-names.json");
 const last_names = require("../lib/last-names.json");
 
+/**
+ * The emulator is the central coordinator of an emulated network. Emu instantiates peers, each
+ * on their own thread, and handles messaging between peers by acting as the hub in a hub-and-spoke
+ * pattern. For each peer in the system, two messaging ports are created: A "message" port and a 
+ * "control" port. The message port is used for Passerby messages; when Bob's Passerby transport 
+ * needs to send a message to Alice, Bob sends that message over the message port, where it's 
+ * received by Emu, and Emu forwards it on to Alice. The control port is used to activate peer 
+ * functions in the style of an RPC system; when a client wants Bob to perform a geosearch, Emu
+ * sends a control message over the control port to Bob instructing Bob to execute a geosearch, and 
+ * Bob returns a control message over the control port with his result. Control is currently 
+ * unidirectional, meaning Emu can only issue requests, and peers can only issue responses.
+ */ 
+
 class Emu {
   static LAT_MINUTES_MILES = 1.15;
   static LON_MINUTES_MILES = 0.91;
@@ -120,7 +133,9 @@ class Emu {
       this.peer_table.set(workerData.pubstring, {control: control_port1, msg: msg_port1});
 
       /**
-       * When the bootstrap receives a control message from the emulator, announce it for all subscribers
+       * When the bootstrap node receives a control message from the emulator, announce it to everyone
+       * TODO: This (and a bit of what immediately follows below) is duplicated in Emu.add_peer, is
+       * there a way to roll these together? Why can't we add the bootstrap node as a regular peer?
        */ 
       control_port1.on("message", (msg) => {
         this.control.emit(msg.id, control_port1, msg);
@@ -187,7 +202,7 @@ class Emu {
       this.peer_table.set(workerData.pubstring, {control: control_port1, msg: msg_port1});
 
       /**
-       * When the bootstrap receives a control message from the emulator, announce it for all subscribers
+       * When this peer receives a control message from the emulator, announce it to everyone
        */ 
       control_port1.on("message", (msg) => {
         this.control.emit(msg.id, control_port1, msg);
@@ -241,6 +256,10 @@ class Emu {
     }
   }
 
+  /**
+   * The generation number is used to uniquely identify control messages... hard to image ever issuing
+   * enough control messages per second to wrap 0xFFFFFFFF and collide, but if things break, maybe we do lol
+   */ 
   gen() {
     this._generation = this._generation < 0xFFFFFFFF ? this._generation + 1 : 0;
     return this._generation;

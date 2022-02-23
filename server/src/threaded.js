@@ -4,6 +4,13 @@ const cfg = require("../park.json");
 const p = cfg.passerby_path;
 const { Transport, Rinfo } = require(`${p}/src/transport/transport.js`);
 
+/**
+ * A bespoke Passerby Transport subclass for our hub-and-spoke multithreaded peer process management
+ * architecture. When we hear an inbound message on our message port, we emit it on our receiver. 
+ * To send a message, we post it to our message port with the contact info of its recipient, and
+ * the emulator acts as a router, forwarding it to its destination.
+ */ 
+
 class Threaded extends Transport {
   constructor({my_addr, my_port = 31337, worker_port} = {}) {
     super();

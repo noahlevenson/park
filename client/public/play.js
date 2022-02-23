@@ -49,8 +49,9 @@ const play = {
 
           const new_loc = geo_to_screenspace(peer.last_asserted_lat, peer.last_asserted_lon);
           const dist = game.math.max(game.math.distance(old_loc.x, old_loc.y, new_loc.x, new_loc.y), 100);
-          const duration = dist * MSG_ANIMATION_BASE_DURATION;
+          const duration = dist * ANIMATION_BASE_DURATION;
 
+          // Truly hacky way to update this peer's lat/lon text element
           peers[pubstring].children[2].setText(`${peer.last_asserted_lat}, ${peer.last_asserted_lon}`)
 
           const move_tween = game.add.tween(peers[pubstring].position).
@@ -87,7 +88,7 @@ const play = {
       msg_sprite.anchor.setTo(0.5, 0.5);
 
       const dist = game.math.max(game.math.distance(start.x, start.y, end.x, end.y), 100);
-      const duration = dist * MSG_ANIMATION_BASE_DURATION;
+      const duration = dist * ANIMATION_BASE_DURATION;
       let msg_tween;
 
       // It's a loopback message, so we do a special yoyo animation

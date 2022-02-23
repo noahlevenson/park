@@ -1,7 +1,7 @@
 "use strict"
 
 // TODO: map size, map center, and geo constants should be kept in a shared config with the server
-const MSG_ANIMATION_BASE_DURATION = 5;
+const ANIMATION_BASE_DURATION = 5;
 const SCREENSPACE_SIZE = 1000;
 const SCREENSPACE_CENTER = SCREENSPACE_SIZE / 2;
 const MAP_SIZE = 20;
