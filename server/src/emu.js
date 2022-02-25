@@ -265,8 +265,8 @@ class Emu {
   }
 
   /**
-   * The generation number is used to uniquely identify control messages... hard to image ever issuing
-   * enough control messages per second to wrap 0xFFFFFFFF and collide, but if things break, maybe we do lol
+   * The generation number uniquely identifies control messages; hard to imagine ever issuing enough
+   * control messages per second to wrap 0xFFFFFFFF and collide, but if things break, maybe we do lol
    */ 
   gen() {
     this._generation = this._generation < 0xFFFFFFFF ? this._generation + 1 : 0;
