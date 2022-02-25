@@ -66,7 +66,15 @@ class Emu {
               peer_state.location.lon, 
               msg.range
             ]), (port, control_msg) => {
-              this.server.send({type: "search", search: control_msg.payload});
+              this.server.send({
+                type: "search", 
+                search: {
+                  lat: peer_state.location.lat,
+                  lon: peer_state.location.lon, 
+                  range: msg.range,
+                  results: control_msg.payload
+                }
+              });
             });
           })();
             

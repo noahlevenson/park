@@ -2,7 +2,8 @@
 
 const socket = io();
 let last_state = null;
-let peers = new Map();
+const peers = new Map();
+const squares = [];
 
 /**
  * API request wrappers
@@ -65,8 +66,9 @@ const play = {
     });
 
     socket.on("search", (search) => {
-      console.log(search);
-    })
+      squares.push(add_square(game, search.lat, search.lon, search.range));
+      console.log(search.results.map(pair => last_state[pair[1]].name));
+    });
 
     socket.on("traffic", (from, to) => {
       // TODO: If we make our boot process cleaner, we won't need these
@@ -111,8 +113,8 @@ const play = {
  * Construct the game and start!
  */ 
 const cfg = {
-  width: SCREENSPACE_SIZE,
-  height: SCREENSPACE_SIZE,
+  width: SCREENSPACE_SIZE + BORDER * 2,
+  height: SCREENSPACE_SIZE + BORDER * 2,
   multiTexture: false,
   parent: "playfield",
   enableDebug: false,
