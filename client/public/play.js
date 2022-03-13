@@ -68,6 +68,7 @@ const play = {
     socket.on("search", (search) => {
       squares.push(add_square(game, search.lat, search.lon, search.range));
       console.log(search.results.map(pair => last_state[pair[1]].name));
+      console.log(`Elapsed: ${search.elapsed}ms`);
     });
 
     socket.on("traffic", (from, to) => {

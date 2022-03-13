@@ -60,6 +60,7 @@ class Emu {
             }
 
             const control_port = this.peer_table.get(peer_state.pubstring).control;
+            const t1 = Date.now();
 
             this.send_control(control_port, new Control_msg(this.gen(), "geosearch", [
               peer_state.location.lat, 
@@ -72,7 +73,8 @@ class Emu {
                   lat: peer_state.location.lat,
                   lon: peer_state.location.lon, 
                   range: msg.range,
-                  results: control_msg.payload
+                  results: control_msg.payload,
+                  elapsed: Date.now() - t1
                 }
               });
             });
