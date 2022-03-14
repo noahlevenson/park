@@ -29,7 +29,7 @@ const play = {
      * Make graphics for a message sprite
      */ 
     const msg_gfx = game.make.graphics(0, 0);
-    msg_gfx.beginFill(0xEB34E1);
+    msg_gfx.beginFill(0xFFFFFF);
     msg_gfx.drawCircle(0, 0, 5);
     msg_gfx.endFill();
 
@@ -71,41 +71,62 @@ const play = {
       console.log(`Elapsed: ${search.elapsed}ms`);
     });
 
-    socket.on("traffic", (from, to) => {
-      // TODO: If we make our boot process cleaner, we won't need these
-      if (last_state === null || !last_state[from] || !last_state[to]) {
-        return;
-      } 
+    socket.on("traffic", (traffic_map) => {
+      for (const [key, tuple] of Object.entries(traffic_map)) {
+        const [from, to, count] = tuple;
 
-      const start = geo_to_screenspace(
-        last_state[from].last_asserted_lat, 
-        last_state[from].last_asserted_lon
-      );
+        // TODO: If we make our boot process cleaner, we won't need these
+        if (last_state === null || !last_state[from] || !last_state[to]) {
+          return;
+        } 
 
-      const end = geo_to_screenspace(
-        last_state[to].last_asserted_lat, 
-        last_state[to].last_asserted_lon
-      );
+        const start = geo_to_screenspace(
+          last_state[from].last_asserted_lat, 
+          last_state[from].last_asserted_lon
+        );
 
-      const msg_sprite = game.add.sprite(start.x, start.y, msg_gfx.generateTexture());
-      msg_sprite.anchor.setTo(0.5, 0.5);
+        const end = geo_to_screenspace(
+          last_state[to].last_asserted_lat, 
+          last_state[to].last_asserted_lon
+        );
 
-      const dist = game.math.max(game.math.distance(start.x, start.y, end.x, end.y), 100);
-      const duration = dist * ANIMATION_BASE_DURATION;
-      let msg_tween;
+        const msg_sprite = game.add.sprite(start.x, start.y, msg_gfx.generateTexture());
 
-      // It's a loopback message, so we do a special yoyo animation
-      if (start.x === end.x && start.y === end.y) {
-        msg_tween = game.add.tween(msg_sprite.position).
-          to({x: start.x, y: end.y - dist}, duration, Phaser.Easing.Linear.None, true, 0, 0, true);
-      } else {
-        msg_tween = game.add.tween(msg_sprite.position).
-          to({x: end.x, y: end.y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
+        if (count < 5) {
+          msg_sprite.tint = 0x77b300;
+        } else if (count < 15) {
+          msg_sprite.tint = 0xffff00;
+        } else {
+          msg_sprite.tint = 0xff0000;
+        }
+
+        /**
+         * Alternate color code idea: Give message sprites a brightness value along a single hue
+         * const r = Math.min(0xFF, 0x99 * count);
+         * const g = Math.min(0xFF, 0x01 * count);
+         * const b = Math.min(0xFF, 0x01 * count);
+         * msg_sprite.tint = (r << 16) | (g << 8) | b;
+         */ 
+    
+        msg_sprite.anchor.setTo(0.5, 0.5);
+
+        const dist = game.math.max(game.math.distance(start.x, start.y, end.x, end.y), 100);
+        const duration = dist * ANIMATION_BASE_DURATION;
+        let msg_tween;
+
+        // It's a loopback message, so we do a special yoyo animation
+        if (start.x === end.x && start.y === end.y) {
+          msg_tween = game.add.tween(msg_sprite.position).
+            to({x: start.x, y: end.y - dist}, duration, Phaser.Easing.Linear.None, true, 0, 0, true);
+        } else {
+          msg_tween = game.add.tween(msg_sprite.position).
+            to({x: end.x, y: end.y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
+        }
+
+        msg_tween.onComplete.addOnce(() => {
+          msg_sprite.destroy();
+        });
       }
-
-      msg_tween.onComplete.addOnce(() => {
-        msg_sprite.destroy();
-      });
     });
   }
 }
@@ -116,7 +137,7 @@ const play = {
 const cfg = {
   width: SCREENSPACE_SIZE + BORDER * 2,
   height: SCREENSPACE_SIZE + BORDER * 2,
-  multiTexture: false,
+  multiTexture: true,
   parent: "playfield",
   enableDebug: false,
   renderer: Phaser.CANVAS,
