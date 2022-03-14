@@ -3,7 +3,7 @@
 const socket = io();
 let last_state = null;
 const peers = new Map();
-const squares = [];
+let squares = [];
 
 /**
  * API request wrappers
@@ -20,11 +20,53 @@ function req_move(name, lat, lon) {
   socket.emit("move", name, lat, lon);
 }
 
+function cls() {
+  for (var [key, peer] of peers) {
+    peer.dehighlight();
+  }
+
+  squares.forEach((square) => {
+    square.destroy();
+  });
+
+  squares = [];
+}
+
 /**
  * Game logic
  */ 
 const play = {
+  preload: () => {
+    game.load.image("clear_button", "./clear.png", 50, 50);
+  },
+
   create: () => {
+    /**
+     * Set up the clear button
+     */ 
+    const clear_button = game.add.sprite(10, 10, "clear_button");
+    clear_button.tint = 0x8C8C8C;
+
+    clear_button.events.onInputOver.add(() => {
+      clear_button.tint = 0xFFFFFF;
+    });
+
+    clear_button.events.onInputOut.add(() => {
+      clear_button.tint = 0x8C8C8C;
+    });
+
+    clear_button.events.onInputDown.add(() => {
+      cls();
+      clear_button.tint = 0xFF0066;
+    });
+
+    clear_button.events.onInputUp.add(() => {
+      clear_button.tint = 0xFFFFFF;
+    });
+
+    clear_button.inputEnabled = true;
+    clear_button.useHandCursor = true;
+
     /**
      * Make graphics for a message sprite
      */ 
@@ -42,7 +84,7 @@ const play = {
          * If we've already created a peer object for this peer, lerp it to their new location -- and
          * if we haven't, then create a new peer object for this peer
          */ 
-        if (peers[pubstring]) {
+        if (peers.has(pubstring)) {
           const old_loc = geo_to_screenspace(
             last_state[pubstring].last_asserted_lat, 
             last_state[pubstring].last_asserted_lon
@@ -53,12 +95,12 @@ const play = {
           const duration = dist * ANIMATION_BASE_DURATION;
 
           // Truly hacky way to update this peer's lat/lon text element
-          peers[pubstring].location.setText(`${peer.last_asserted_lat}, ${peer.last_asserted_lon}`)
+          peers.get(pubstring).location.setText(`${peer.last_asserted_lat}, ${peer.last_asserted_lon}`)
         
-          const move_tween = game.add.tween(peers[pubstring].group.position).
+          const move_tween = game.add.tween(peers.get(pubstring).group.position).
             to({x: new_loc.x, y: new_loc.y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
         } else {
-          peers[pubstring] = add_peer(game, peer.name, peer.last_asserted_lat, peer.last_asserted_lon);
+          peers.set(pubstring, add_peer(game, peer.name, peer.last_asserted_lat, peer.last_asserted_lon));
         }
       }
 
@@ -69,7 +111,7 @@ const play = {
       squares.push(add_square(game, search.lat, search.lon, search.range));
 
       search.results.forEach((pair) => {
-        peers[pair[1]].highlight();
+        peers.get(pair[1]).highlight();
       });
 
       console.log(search.results.map(pair => last_state[pair[1]].name));

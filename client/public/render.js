@@ -53,7 +53,7 @@ function add_peer(game, name, lat, lon) {
 }
 
 /**
- * It'd be better if this just constructed a box object and didn't draw it
+ * TODO: It'd be better if this just constructed a box object and didn't draw it
  */ 
 function add_square(game, lat, lon, range) {
   const {x, y} = geo_to_screenspace(lat, lon);
@@ -86,5 +86,10 @@ class Peer {
     this.dot.tint = 0xFFFFFF;
     this.nametag.tint = 0xFFFFFF;
     this.location.tint = 0xFFFFFF;
+
+    /**
+     * The following line corrects a bug in Phaser which messes up tinting behavior
+     */ 
+    this.dot.graphicsData[0]._fillTint = 0xFFFFFF;
   }
 }
