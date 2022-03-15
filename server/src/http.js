@@ -78,6 +78,7 @@ process.on("message", (msg) => {
       io.emit("search", msg.search);
       break;
     case "traffic":
+      console.log(`${msg.from} -> ${msg.to}`);
       const key = `${msg.from}:${msg.to}`;
       const n = traffic.has(key) ? traffic.get(key)[2] + 1 : 1;
       traffic.set(key, [msg.from, msg.to, n]);
