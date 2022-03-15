@@ -5,6 +5,10 @@ const http = require("http");
 const url = require("url");
 const { Server } = require("socket.io");
 
+const cfg = require("../park.json");
+const p = cfg.passerby_path;  
+const Journal = require(`${p}src/core/journal.js`);
+
 const HTTP_HOST = "localhost";
 const HTTP_PORT = 9000;
 const CLIENT_PATH = "../../client/public";
@@ -78,7 +82,8 @@ process.on("message", (msg) => {
       io.emit("search", msg.search);
       break;
     case "traffic":
-      console.log(`${msg.from} -> ${msg.to}`);
+      Journal.log("PARK", `Chunk from ${msg.from}...`);
+      Journal.log("PARK", `...to ${msg.to}`);
       const key = `${msg.from}:${msg.to}`;
       const n = traffic.has(key) ? traffic.get(key)[2] + 1 : 1;
       traffic.set(key, [msg.from, msg.to, n]);
