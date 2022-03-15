@@ -25,6 +25,12 @@ function geo_to_screenspace(lat, lon) {
   return {x: SCREENSPACE_CENTER + lat_px_offset + BORDER, y: SCREENSPACE_CENTER + lon_px_offset + BORDER};
 }
 
+function screenspace_to_geo(x, y) { 
+  const lat_offset = (SCREENSPACE_CENTER - x + BORDER) / LAT_S;
+  const lon_offset = (SCREENSPACE_CENTER - y + BORDER) / LON_S;
+  return {lat: MAP_CENTER_LAT + lat_offset, lon: MAP_CENTER_LON + lon_offset};  
+}
+
 /**
  * TODO: It'd be better if this just constructed a box object and didn't draw it
  */ 
@@ -51,6 +57,7 @@ class Peer {
   static COL_SEARCH = 0x80ff00;
 
   constructor({game, name, lat, lon} = {}) {
+    this.game = game;
     this.group = game.add.group();
     this.group.position = geo_to_screenspace(lat, lon);
     this.dot = game.add.graphics(0, 0);
@@ -89,6 +96,12 @@ class Peer {
     // The following line corrects a bug in Phaser which messes up tinting behavior
     this.dot.graphicsData[0]._fillTint = 0xFFFFFF;
   }
+
+  move(x, y, duration) {
+    const move_tween = this.game.add.tween(this.group.position).
+      to({x: x, y: y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
+    this.palette.group.position = {x: x, y: y};
+  }
 }
 
 /**
@@ -97,12 +110,13 @@ class Peer {
 class Palette {
   constructor({game, peer} = {}) {
     this.peer = peer;
+    this.game = game;
 
     this.ACTIONS = new Map([
       ["SEARCH 2", [req_search, this.peer.nametag.text, 2]],
       ["SEARCH 5", [req_search, this.peer.nametag.text, 5]],
       ["SEARCH 10", [req_search, this.peer.nametag.text, 10]],
-      ["MOVE", null]
+      ["MOVE", [this._move]]
     ]);
 
     this.group = game.add.group();
@@ -133,7 +147,7 @@ class Palette {
 
       action.events.onInputDown.add(() => {
         const [f, ...args] = this.ACTIONS.get(name);
-        f(...args);
+        f.bind(this)(...args);
       });
 
       this.group.add(action);
@@ -150,5 +164,22 @@ class Palette {
     });
 
     game.ui_group.add(this.group);
+  }
+
+  _move() {
+    this.game.canvas.style.cursor = "none";
+    this.game.crosshair_cursor.visible = true;
+
+    this.game.input.onDown.add(() => {
+      const coord = screenspace_to_geo(
+        this.game.input.mousePointer.x,
+        this.game.input.mousePointer.y
+      );
+      
+      req_move(this.peer.nametag.text, coord.lat, coord.lon);
+      this.game.crosshair_cursor.visible = false;
+      this.game.canvas.style.cursor = "auto";
+      this.game.input.onDown.removeAll();
+    });
   }
 }

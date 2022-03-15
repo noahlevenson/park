@@ -37,16 +37,23 @@ function cls() {
  */ 
 const play = {
   preload: () => {
-    game.load.image("clear_button", "./clear.png", 50, 50);
+    game.load.image("clear_button", "img/clear.png", 50, 50);
+    game.load.image("crosshair_cursor", "img/crosshair_cursor.png", 60, 60);
   },
 
+  // TODO: we prob shouldn't monkeypatch the game object the way we do below
   create: () => {
     /**
      * Set up the groups for z-ordering
-     * TODO: you prob shouldn't monkeypatch the game object
      */
     game.peer_group = game.add.group();
     game.ui_group = game.add.group();
+
+    /**
+     * Build the crosshair cursor
+     */ 
+    game.crosshair_cursor = game.add.sprite(0, 0, "crosshair_cursor");
+    game.crosshair_cursor.visible = false;
 
     /**
      * Set up the clear button
@@ -101,11 +108,8 @@ const play = {
           const dist = game.math.max(game.math.distance(old_loc.x, old_loc.y, new_loc.x, new_loc.y), 100);
           const duration = dist * ANIMATION_BASE_DURATION;
 
-          // Truly hacky way to update this peer's lat/lon text element
-          peers.get(pubstring).location.setText(`${peer.last_asserted_lat}, ${peer.last_asserted_lon}`)
-        
-          const move_tween = game.add.tween(peers.get(pubstring).group.position).
-            to({x: new_loc.x, y: new_loc.y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
+          peers.get(pubstring).location.setText(`${peer.last_asserted_lat}, ${peer.last_asserted_lon}`);
+          peers.get(pubstring).move(new_loc.x, new_loc.y, duration);
         } else {
           peers.set(pubstring, new Peer({
             game: game, 
@@ -192,6 +196,12 @@ const play = {
         });
       }
     });
+  },
+
+  update: () => {
+    // Persistently draw the crosshair cursor just to make life simple... we'll toggle its visibility elsewhere
+    game.crosshair_cursor.x = game.input.mousePointer.x - 30;
+    game.crosshair_cursor.y = game.input.mousePointer.y - 30; 
   }
 }
 
