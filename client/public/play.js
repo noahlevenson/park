@@ -22,11 +22,11 @@ function req_move(name, lat, lon) {
 
 function cls() {
   for (var [key, peer] of peers) {
-    peer.dehighlight();
+    peer.color(Peer.COL_DEFAULT);
   }
 
   squares.forEach((square) => {
-    square.destroy();
+    square.box.destroy();
   });
 
   squares = [];
@@ -41,6 +41,13 @@ const play = {
   },
 
   create: () => {
+    /**
+     * Set up the groups for z-ordering
+     * TODO: you prob shouldn't monkeypatch the game object
+     */
+    game.peer_group = game.add.group();
+    game.ui_group = game.add.group();
+
     /**
      * Set up the clear button
      */ 
@@ -100,7 +107,12 @@ const play = {
           const move_tween = game.add.tween(peers.get(pubstring).group.position).
             to({x: new_loc.x, y: new_loc.y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
         } else {
-          peers.set(pubstring, add_peer(game, peer.name, peer.last_asserted_lat, peer.last_asserted_lon));
+          peers.set(pubstring, new Peer({
+            game: game, 
+            name: peer.name, 
+            lat: peer.last_asserted_lat, 
+            lon: peer.last_asserted_lon
+          }));
         }
       }
 
@@ -108,10 +120,15 @@ const play = {
     });
 
     socket.on("search", (search) => {
-      squares.push(add_square(game, search.lat, search.lon, search.range));
+      squares.push(new Bounding({
+        game: game, 
+        lat: search.lat, 
+        lon: search.lon, 
+        range: search.range
+      }));
 
       search.results.forEach((pair) => {
-        peers.get(pair[1]).highlight();
+        peers.get(pair[1]).color(Peer.COL_SEARCH);
       });
 
       console.log(search.results.map(pair => last_state[pair[1]].name));

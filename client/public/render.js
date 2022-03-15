@@ -26,70 +26,129 @@ function geo_to_screenspace(lat, lon) {
 }
 
 /**
- * TODO: It'd be better if this just constructed a peer object and didn't draw it
- */
-function add_peer(game, name, lat, lon) {
-  const {x, y} = geo_to_screenspace(lat, lon);
-
-  const peer_group = game.add.group();
-  peer_group.position = {x, y};
-
-  const dot = game.add.graphics(0, 0);
-  dot.beginFill(0xFFFFFF);
-  dot.drawCircle(0, 0, 10);
-  dot.endFill();
-
-  const nametag = game.add.text(0, 0 + 20, `${name}`, {fontSize: "12px", fill: "#FFFFFF"});
-  nametag.anchor.setTo(0.5, 0.5);
-  const location = game.add.text(0, 0 + 40, `${lat}, ${lon}`, {fontSize: "12px", fill: "#FFFFFF"});
-  location.anchor.setTo(0.5, 0.5);
-
-  const peer = new Peer(dot, nametag, location);
-
-  peer_group.add(dot);
-  peer_group.add(nametag);
-  peer_group.add(location);
-  return new Peer({dot: dot, nametag: nametag, location: location, group: peer_group});
+ * TODO: It'd be better if this just constructed a box object and didn't draw it
+ */ 
+class Bounding {
+  constructor({game, lat, lon, range} = {}) {
+    const {x, y} = geo_to_screenspace(lat, lon);
+    const lat_offset = range / LAT_MINUTES_MILES / MINUTES_PER_DEGREE * LAT_S;
+    const lon_offset = range / LON_MINUTES_MILES / MINUTES_PER_DEGREE * LON_S;
+    this.x = x - lat_offset;
+    this.y = y - lon_offset;
+    this.w = lat_offset * 2;
+    this.h = lon_offset * 2;
+    this.box = game.add.graphics(0, 0);
+    this.box.lineStyle(4, Peer.COL_SEARCH, 1.0);
+    this.box.drawRect(this.x, this.y, this.w, this.h);
+  }
 }
 
 /**
- * TODO: It'd be better if this just constructed a box object and didn't draw it
- */ 
-function add_square(game, lat, lon, range) {
-  const {x, y} = geo_to_screenspace(lat, lon);
-  const lat_offset = range / LAT_MINUTES_MILES / MINUTES_PER_DEGREE * LAT_S;
-  const lon_offset = range / LON_MINUTES_MILES / MINUTES_PER_DEGREE * LON_S;
+ * TODO: It'd be better if this just constructed a peer object and didn't draw it
+ */
+class Peer {
+  static COL_DEFAULT = 0xFFFFFF;
+  static COL_SEARCH = 0x80ff00;
 
-  const box = game.add.graphics(0, 0);
-  box.lineStyle(4, Peer.HIGHLIGHT_TINT, 1.0);
-  box.drawRect(x - lat_offset, y - lon_offset, lat_offset * 2, lon_offset * 2);
-  return box;
+  constructor({game, name, lat, lon} = {}) {
+    this.group = game.add.group();
+    this.group.position = geo_to_screenspace(lat, lon);
+    this.dot = game.add.graphics(0, 0);
+    this.dot.beginFill(Peer.COL_DEFAULT);
+    this.dot.drawCircle(0, 0, 10);
+    this.dot.endFill();
+    this.nametag = game.add.text(0, 0 + 20, `${name}`, {fontSize: "12px", fill: "#FFFFFF"});
+    this.nametag.anchor.setTo(0.5, 0.5);
+    this.location = game.add.text(0, 0 + 40, `${lat}, ${lon}`, {fontSize: "12px", fill: "#FFFFFF"});
+    this.location.anchor.setTo(0.5, 0.5);
+    this.group.add(this.dot);
+    this.group.add(this.nametag);
+    this.group.add(this.location);
+    this.palette = new Palette({game: game, peer: this});
+    this.palette.group.position = {x: this.group.position.x + 20, y: this.group.position.y};
+    this.dot.inputEnabled = true;
+    this.nametag.inputEnabled = true;
+    this.location.inputEnabled = true;
+
+    this.group.onChildInputOver.add(() => {
+      this.palette.group.visible = true;
+    });
+
+    this.group.onChildInputOut.add(() => {
+      this.palette.group.visible = false;
+    });
+
+    game.peer_group.add(this.group);
+  }
+
+  color(color) {
+    this.dot.tint = color;
+    this.nametag.tint = color;
+    this.location.tint = color;
+
+    // The following line corrects a bug in Phaser which messes up tinting behavior
+    this.dot.graphicsData[0]._fillTint = 0xFFFFFF;
+  }
 }
 
-class Peer {
-  static HIGHLIGHT_TINT = 0x80ff00;
+/**
+* TODO: break this out elsewhere
+*/
+class Palette {
+  constructor({game, peer} = {}) {
+    this.peer = peer;
 
-  constructor({dot, nametag, location, group} = {}) {
-    this.dot = dot;
-    this.nametag = nametag;
-    this.location = location;
-    this.group = group;
-  }
+    this.ACTIONS = new Map([
+      ["SEARCH 2", [req_search, this.peer.nametag.text, 2]],
+      ["SEARCH 5", [req_search, this.peer.nametag.text, 5]],
+      ["SEARCH 10", [req_search, this.peer.nametag.text, 10]],
+      ["MOVE", null]
+    ]);
 
-  highlight() {
-    this.dot.tint = Peer.HIGHLIGHT_TINT;
-    this.nametag.tint = Peer.HIGHLIGHT_TINT;
-    this.location.tint = Peer.HIGHLIGHT_TINT;
-  }
+    this.group = game.add.group();
+    this.box = game.add.graphics(0, 0);
+    this.box.beginFill(0x8C8C8C);
+    this.box.drawRect(0, 0, this.ACTIONS.size * 20, this.ACTIONS.size * 20);
+    this.box.endFill();
+    this.box.inputEnabled = true;
+    this.group.add(this.box);
+  
+    Array.from(this.ACTIONS.entries()).forEach((pair, i) => {
+      const [name, f] = pair;
+      
+      const action = game.add.text(0, i * 20, `${name}`, {
+        fontSize: "14px", 
+        fill: "#000000"
+      });
 
-  dehighlight() {
-    this.dot.tint = 0xFFFFFF;
-    this.nametag.tint = 0xFFFFFF;
-    this.location.tint = 0xFFFFFF;
+      action.inputEnabled = true;
 
-    /**
-     * The following line corrects a bug in Phaser which messes up tinting behavior
-     */ 
-    this.dot.graphicsData[0]._fillTint = 0xFFFFFF;
+      action.events.onInputOver.add(() => {
+        action.fill = "#FF0066";
+      });
+
+      action.events.onInputOut.add(() => {
+        action.fill = "#000000";
+      });
+
+      action.events.onInputDown.add(() => {
+        const [f, ...args] = this.ACTIONS.get(name);
+        f(...args);
+      });
+
+      this.group.add(action);
+    });
+
+    this.group.visible = false;
+
+    this.group.onChildInputOver.add(() => {
+      this.group.visible = true;
+    });
+
+    this.group.onChildInputOut.add(() => {
+      this.group.visible = false;
+    });
+
+    game.ui_group.add(this.group);
   }
 }
