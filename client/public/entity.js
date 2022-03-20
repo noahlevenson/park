@@ -1,17 +1,22 @@
 "use strict";
 
 class World {
+  static BG_COLOR = 0x000000;
+
   constructor(socket, game) {
     this.socket = socket;
     this.game = game;
     this.last_state = null;
     this.peers = new Map();
     this.boundings = [];
+    this.bg_group;
     this.peer_group;
+    this.traffic_group;
     this.bounding_group;
     this.ui_group;
     this.crosshair_cursor;
     this.msg_gfx;
+    this.bg;
 
     /**
      * Handle state messages from the server
@@ -96,6 +101,7 @@ class World {
         );
 
         const msg_sprite = this.game.add.sprite(start.x, start.y, this.msg_gfx.generateTexture());
+        this.traffic_group.add(msg_sprite);
 
         if (count < 5) {
           msg_sprite.tint = 0x77b300;
@@ -204,19 +210,21 @@ class Peer {
     this.group.add(this.location);
     this.palette = new Palette({game: game, peer: this});
     this.palette.group.position = {x: this.group.position.x + 20, y: this.group.position.y};
-    this.dot.inputEnabled = true;
-    this.nametag.inputEnabled = true;
-    this.location.inputEnabled = true;
 
-    this.group.onChildInputOver.add(() => {
+    this.group.onChildInputDown.add(() => {
+      for (const [pubstring, peer] of this.world.peers) {
+        peer.palette.group.visible = false;
+      }
+
       this.palette.group.visible = true;
-    });
 
-    this.group.onChildInputOut.add(() => {
-      this.palette.group.visible = false;
+      this.world.bg.events.onInputDown.add(() => {
+        this.palette.group.visible = false;
+      });
     });
 
     this.world.peer_group.add(this.group);
+    this.enable();
   }
 
   color(color) {
@@ -232,6 +240,21 @@ class Peer {
     const move_tween = this.game.add.tween(this.group.position).
       to({x: x, y: y}, duration, Phaser.Easing.Linear.None, true, 0, 0, false);
     this.palette.group.position = {x: x, y: y};
+  }
+
+  enable() {
+    this.dot.inputEnabled = true;
+    this.nametag.inputEnabled = true;
+    this.location.inputEnabled = true;
+    this.dot.input.useHandCursor = true;
+    this.nametag.input.useHandCursor = true;
+    this.location.input.useHandCursor = true;
+  }
+
+  disable() {
+    this.dot.inputEnabled = false;
+    this.nametag.inputEnabled = false;
+    this.location.inputEnabled = false;
   }
 }
 
@@ -252,7 +275,7 @@ class Palette {
     this.box.beginFill(0x8C8C8C);
     this.box.drawRect(0, 0, this.ACTIONS.size * 20, this.ACTIONS.size * 20);
     this.box.endFill();
-    this.box.inputEnabled = true;
+    this.actions = [];
     this.group.add(this.box);
   
     Array.from(this.ACTIONS.entries()).forEach((pair, i) => {
@@ -264,6 +287,7 @@ class Palette {
       });
 
       action.inputEnabled = true;
+      action.input.useHandCursor = true;
 
       action.events.onInputOver.add(() => {
         action.fill = "#FF0066";
@@ -274,23 +298,16 @@ class Palette {
       });
 
       action.events.onInputDown.add(() => {
+        this.group.visible = false;
         const [f, ...args] = this.ACTIONS.get(name);
         f.bind(this)(...args);
       });
 
+      this.actions.push(action);
       this.group.add(action);
     });
 
     this.group.visible = false;
-
-    this.group.onChildInputOver.add(() => {
-      this.group.visible = true;
-    });
-
-    this.group.onChildInputOut.add(() => {
-      this.group.visible = false;
-    });
-
     this.peer.world.ui_group.add(this.group);
   }
 
@@ -299,10 +316,32 @@ class Palette {
   }
 
   _move() {
+    /**
+     * Disabling the peers and actions (and re-enabling them below) is necessary to prevent some
+     * weird buggy issues with hiding the mouse cursor :(
+     */ 
+    for (const [pubstring, peer] of this.peer.world.peers) {
+      peer.disable();
+    }
+
+    this.actions.forEach((action) => {
+      action.inputEnabled = false;
+      action.input.useHandCursor = false;
+    });
+
     this.game.canvas.style.cursor = "none";
     this.peer.world.crosshair_cursor.visible = true;
 
     this.game.input.onDown.add(() => {
+      for (const [pubstring, peer] of this.peer.world.peers) {
+        peer.enable();
+      }
+
+      this.actions.forEach((action) => {
+        action.inputEnabled = true;
+        action.input.useHandCursor = true;
+      });
+
       const coord = screenspace_to_geo(
         this.game.input.mousePointer.x,
         this.game.input.mousePointer.y
@@ -310,7 +349,7 @@ class Palette {
       
       this.peer.world.req_move(this.peer.nametag.text, coord.lat, coord.lon);
       this.peer.world.crosshair_cursor.visible = false;
-      this.game.canvas.style.cursor = "auto";
+      this.game.canvas.style.cursor = "default";
       this.game.input.onDown.removeAll();
     });
   }

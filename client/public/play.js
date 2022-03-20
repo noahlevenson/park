@@ -17,9 +17,20 @@ const play = {
     /**
      * Set up the groups for z-ordering
      */
+    this.world.bg_group = game.add.group();
     this.world.peer_group = game.add.group();
+    this.world.traffic_group = game.add.group();
     this.world.bounding_group = game.add.group();
     this.world.ui_group = game.add.group();
+
+    /**
+     * Add the background (we use the background to intercept clicks that don't target game objects)
+     */
+    this.world.bg = game.add.graphics(0, 0);
+    this.world.bg.beginFill(World.BG_COLOR);
+    this.world.bg.drawRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    this.world.bg.inputEnabled = true; 
+    this.world.bg_group.add(this.world.bg);
 
     /**
      * Build the crosshair cursor
@@ -51,7 +62,7 @@ const play = {
     });
 
     clear_button.inputEnabled = true;
-    clear_button.useHandCursor = true;
+    clear_button.input.useHandCursor = true;
 
     /**
      * Make graphics for a message sprite
@@ -78,8 +89,8 @@ const play = {
  * Construct the game and start!
  */ 
 const cfg = {
-  width: SCREENSPACE_SIZE + BORDER * 2,
-  height: SCREENSPACE_SIZE + BORDER * 2,
+  width: CANVAS_SIZE,
+  height: CANVAS_SIZE,
   multiTexture: true,
   parent: "playfield",
   enableDebug: false,
