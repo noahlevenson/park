@@ -264,16 +264,16 @@ class Palette {
     this.game = game;
 
     this.ACTIONS = new Map([
-      ["SEARCH 2", [this._search, this.peer.nametag.text, 2]],
-      ["SEARCH 5", [this._search, this.peer.nametag.text, 5]],
-      ["SEARCH 10", [this._search, this.peer.nametag.text, 10]],
+      ["SEARCH 0.5", [this._search, this.peer.nametag.text, 0.5]],
+      ["SEARCH 1", [this._search, this.peer.nametag.text, 1]],
+      ["SEARCH 3", [this._search, this.peer.nametag.text, 3]],
       ["MOVE", [this._move]]
     ]);
 
     this.group = game.add.group();
     this.box = game.add.graphics(0, 0);
     this.box.beginFill(0x8C8C8C);
-    this.box.drawRect(0, 0, this.ACTIONS.size * 20, this.ACTIONS.size * 20);
+    this.box.drawRect(0, 0, 10 + this.ACTIONS.size * 20, this.ACTIONS.size * 20);
     this.box.endFill();
     this.actions = [];
     this.group.add(this.box);

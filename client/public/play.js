@@ -9,6 +9,7 @@ const play = {
   preload: () => {
     game.load.image("clear_button", "img/clear.png", 50, 50);
     game.load.image("crosshair_cursor", "img/crosshair_cursor.png", 60, 60);
+    game.load.image("map", "img/map.png", 1000, 1000);
   },
 
   create: () => {
@@ -26,9 +27,13 @@ const play = {
     /**
      * Add the background (we use the background to intercept clicks that don't target game objects)
      */
-    this.world.bg = game.add.graphics(0, 0);
-    this.world.bg.beginFill(World.BG_COLOR);
-    this.world.bg.drawRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    // this.world.bg = game.add.graphics(0, 0);
+    // this.world.bg.beginFill(World.BG_COLOR);
+    // this.world.bg.drawRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    
+    this.world.bg = game.add.sprite(BORDER, BORDER, "map");
+    this.world.bg.alpha = 0.4;
+
     this.world.bg.inputEnabled = true; 
     this.world.bg_group.add(this.world.bg);
 
