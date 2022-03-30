@@ -1,6 +1,6 @@
 # passerby park
 
-![architecture](https://github.com/noahlevenson/park/blob/master/architecture.png)
+![architecture](https://github.com/noahlevenson/park/blob/main/architecture.png)
 
 Passerby Park is a graphical research emulator for studying the behaviors of [Passerby](https://github.com/noahlevenson/passerby) networks. Using Passerby Park, you can create emulated networks of varying sizes and geographical distributions, issue commands to peers, and visualize the results. 
 
